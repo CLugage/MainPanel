@@ -21,6 +21,9 @@ class Instance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     plan_id = db.Column(db.Integer, db.ForeignKey('plan.id'), nullable=False)
+    ip_address = db.Column(db.String(15), nullable=False)  # Format: 10.10.10.x
+    ssh_port = db.Column(db.Integer, nullable=False)
+    vmid = db.Column(db.Integer, nullable=False)  # Add this field for Proxmox VM ID
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 @login_manager.user_loader

@@ -39,6 +39,9 @@ def login():
             flash('Login Unsuccessful. Please check username and password', 'danger')
     return render_template('login.html', form=form)
 
+
+
+
 @app.route('/create_instance', methods=['GET', 'POST'])
 def create_instance():
     form = CreateInstanceForm()
@@ -63,24 +66,33 @@ def create_instance():
         # Create the LXC instance
         hostname = f'container-{vmid}'
 
-        proxmox.nodes('vps1').lxc.create(
+        proxmox.nodes('your_node_name').lxc.create(
             vmid=vmid,
             hostname=hostname,
-            storage='local', 
-            template='your_template', 
+            storage='local',
+            template='your_template',
             cores=plan.cpus,
             memory=plan.ram,
             swap=0,
-            net0=f'name=eth0,bridge=vmbr0,ip={ip_address},gw=10.10.10.1'  
-            
+            net0=f'name=eth0,bridge=vmbr0,ip={ip_address},gw=10.10.10.1'
         )
 
         # Call the function to update the NAT scripts
         update_nat_scripts(vmid, ip_address, ssh_port)
 
-        return redirect(url_for('success'))  
+        # Save the instance to the database
+        instance = Instance(name=hostname, ip_address=ip_address, ssh_port=ssh_port, vmid=vmid, user_id=current_user.id)
+        db.session.add(instance)
+        db.session.commit()
 
-    return render_template('create_instance.html', form=form)  
+        flash('Instance created successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('create_instance.html', form=form)
+
+
+
+
 
 def get_next_vmid():
     used_vms = [instance.vmid for instance in Instance.query.all()]
@@ -120,6 +132,47 @@ def update_nat_scripts(vmid, ip_address, ssh_port):
     # Update the nat-post-up.sh script
     with open(nat_post_up_path, 'a') as post_up_script:
         post_up_script.write(f"iptables -t nat -A PREROUTING -i vmbr0 -p tcp --dport {ssh_port} -j DNAT --to {ip_address}:22\n")
+
+
+
+@app.route('/start_instance/<int:instance_id>', methods=['POST'])
+@login_required
+def start_instance(instance_id):
+    instance = Instance.query.get_or_404(instance_id)
+    
+    # Connect to Proxmox
+    proxmox = ProxmoxAPI('your_proxmox_host', user='root@pam', password='your_password', verify_ssl=False)
+
+    # Start the LXC instance
+    proxmox.nodes('your_node_name').lxc(instance.vmid).status.start.post()
+
+    flash(f'Instance {instance.name} started!', 'success')
+    return redirect(url_for('dashboard'))
+
+@app.route('/stop_instance/<int:instance_id>', methods=['POST'])
+@login_required
+def stop_instance(instance_id):
+    instance = Instance.query.get_or_404(instance_id)
+    
+    # Connect to Proxmox
+    proxmox = ProxmoxAPI('your_proxmox_host', user='root@pam', password='your_password', verify_ssl=False)
+
+    # Stop the LXC instance
+    proxmox.nodes('your_node_name').lxc(instance.vmid).status.stop.post()
+
+    flash(f'Instance {instance.name} stopped!', 'success')
+    return redirect(url_for('dashboard'))
+
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    instances = Instance.query.filter_by(user_id=current_user.id).all()  # Get all instances for the logged-in user
+    return render_template('dashboard.html', instances=instances)
+
+
+
 
 
 @app.route('/logout')

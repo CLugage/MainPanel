@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<h1>Your Instances</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Instance Name</th>
+            <th>IP Address</th>
+            <th>SSH Port</th>
+            <th>SSH Command</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for instance in instances %}
+        <tr>
+            <td>{{ instance.name }}</td>
+            <td>{{ instance.ip_address }}</td>
+            <td>{{ instance.ssh_port }}</td>
+            <td>
+                <code>ssh root@{{ instance.ip_address }} -p {{ instance.ssh_port }}</code>
+            </td>
+            <td>
+                <form action="{{ url_for('start_instance', instance_id=instance.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-success">Start</button>
+                </form>
+                <form action="{{ url_for('stop_instance', instance_id=instance.id) }}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn btn-danger">Stop</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
