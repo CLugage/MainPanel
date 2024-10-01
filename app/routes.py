@@ -63,15 +63,16 @@ def create_instance():
         # Create the LXC instance
         hostname = f'container-{vmid}'
 
-        proxmox.nodes('your_node_name').lxc.create(
+        proxmox.nodes('vps1').lxc.create(
             vmid=vmid,
             hostname=hostname,
-            storage='local',  # Adjust to your storage
+            storage='local', 
             template='your_template', 
             cores=plan.cpus,
             memory=plan.ram,
             swap=0,
-            net0=f'name=eth0,bridge=vmbr0,ip={ip_address}'  
+            net0=f'name=eth0,bridge=vmbr0,ip={ip_address},gw=10.10.10.1'  
+            
         )
 
         # Call the function to update the NAT scripts
